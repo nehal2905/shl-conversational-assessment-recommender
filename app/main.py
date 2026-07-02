@@ -1,4 +1,4 @@
-"""FastAPI app: /health, /chat (ARCHITECTURE.md §7.8, §3)."""
+"""FastAPI app: /, /health, /chat (ARCHITECTURE.md §7.8, §3)."""
 from __future__ import annotations
 
 import logging
@@ -10,7 +10,11 @@ from app.schemas import ChatRequest, ChatResponse, Recommendation
 
 logger = logging.getLogger("shl-recommender")
 
-app = FastAPI(title="SHL Assessment Recommender")
+app = FastAPI(
+    title="SHL Conversational Assessment Recommender",
+    version="1.0.0",
+    description="Stateless conversational API for recommending SHL assessments."
+)
 
 GRAPH = build_graph()  # compiled once at import
 
@@ -26,28 +30,46 @@ async def _startup() -> None:
 
             await asyncio.to_thread(warm)
             logger.info("Retriever warmed.")
-        except Exception as exc:  # pragma: no cover - warmup best effort
+        except Exception as exc:  # pragma: no cover
             logger.warning("Retriever warm-up failed (will lazy-load): %s", exc)
 
     asyncio.create_task(_warm())
 
 
+@app.get("/")
+def root():
+    """Simple landing endpoint for deployed API."""
+    return {
+        "name": "SHL Conversational Assessment Recommender",
+        "status": "running",
+        "version": "1.0.0",
+        "description": "Stateless conversational API for recommending SHL Individual Test Solutions.",
+        "health": "/health",
+        "docs": "/docs",
+        "chat": "/chat",
+    }
+
+
 @app.get("/health")
 def health():
-    return {"status": "ok"}  # instant, even before warm-up
+    """Health endpoint."""
+    return {"status": "ok"}
 
 
 def _sanitize_messages(req: ChatRequest) -> list[dict]:
-    """Basic input hardening: drop empty/non-string content, ensure the history
-    ends on a user turn so the agent has something to answer."""
+    """
+    Drop empty/non-string messages and ensure the conversation ends
+    on a user message.
+    """
     msgs = [
         {"role": m.role, "content": m.content}
         for m in req.messages
         if isinstance(m.content, str) and m.content.strip()
     ]
-    # Trim trailing assistant turns so we always analyze the latest user input.
+
     while msgs and msgs[-1]["role"] == "assistant":
         msgs.pop()
+
     return msgs
 
 
@@ -55,22 +77,36 @@ def _sanitize_messages(req: ChatRequest) -> list[dict]:
 def chat(req: ChatRequest) -> ChatResponse:
     try:
         messages = _sanitize_messages(req)
+
         if not messages:
             return ChatResponse(
-                reply="What role are you hiring for? Tell me the role and seniority and I'll suggest SHL assessments.",
+                reply=(
+                    "What role are you hiring for? "
+                    "Tell me the role and seniority and I'll recommend suitable SHL assessments."
+                ),
                 recommendations=[],
                 end_of_conversation=False,
             )
+
         state = run_graph(GRAPH, messages)
+
         recs = state.get("recommendations") or []
-        recs = [r if isinstance(r, Recommendation) else Recommendation(**r) for r in recs]
+        recs = [
+            r if isinstance(r, Recommendation) else Recommendation(**r)
+            for r in recs
+        ]
+
         return ChatResponse(
             reply=state.get("reply") or "",
             recommendations=recs,
-            end_of_conversation=bool(state.get("end_of_conversation", False)),
+            end_of_conversation=bool(
+                state.get("end_of_conversation", False)
+            ),
         )
-    except Exception:  # invariant 5: always return valid schema
+
+    except Exception:
         logger.exception("Unhandled error in /chat")
+
         return ChatResponse(
             reply="Sorry — could you rephrase what role you're hiring for?",
             recommendations=[],
