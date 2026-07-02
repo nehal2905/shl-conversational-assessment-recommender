@@ -63,6 +63,103 @@ def _search_query(a: Analysis, messages: List[dict]) -> str:
     return " ".join(p for p in parts if p).strip()
 
 
+_PERSONALITY_QUERY_TERMS = frozenset(
+    {"personality", "opq", "behaviour", "behavior", "motivation"}
+)
+
+
+def _types_in_recommendations(recs: List[Recommendation]) -> set[str]:
+    found: set[str] = set()
+    for rec in recs:
+        found.update(rec.test_type.split())
+    return found
+
+
+def _score_type_match(entry: CatalogEntry, wanted: str, query: str) -> float:
+    q = query.lower()
+    hay = f"{entry.name} {entry.description}".lower()
+    score = sum(1.0 for word in q.split() if len(word) > 2 and word in hay)
+    if wanted == "P":
+        if any(term in q for term in _PERSONALITY_QUERY_TERMS):
+            score += 5.0
+        if "personality" in hay or "opq" in hay:
+            score += 3.0
+    return score
+
+
+def _pick_catalog_entry_for_type(
+    wanted: str,
+    candidates: List[CatalogEntry],
+    exclude_ids: set[str],
+    query: str,
+    catalog: List[CatalogEntry],
+) -> CatalogEntry | None:
+    """Pick the best catalog entry for a requested test type (refine turns only)."""
+    for entry in candidates:
+        if wanted in entry.test_types and entry.id not in exclude_ids:
+            return entry
+
+    best: tuple[float, CatalogEntry] | None = None
+    for entry in catalog:
+        if wanted not in entry.test_types or entry.id in exclude_ids:
+            continue
+        score = _score_type_match(entry, wanted, query)
+        if best is None or score > best[0]:
+            best = (score, entry)
+    if best is None:
+        return None
+    if best[0] > 0:
+        return best[1]
+    if wanted == "P" and any(term in query.lower() for term in _PERSONALITY_QUERY_TERMS):
+        return best[1]
+    return None
+
+
+def _ensure_refine_type_coverage(
+    recs: List[Recommendation],
+    candidates: List[CatalogEntry],
+    wanted_types: List[str],
+    catalog_ids: dict[str, CatalogEntry],
+    query: str,
+) -> List[Recommendation]:
+    """On refine, guarantee each newly requested test type appears in the shortlist."""
+    if not wanted_types:
+        return recs
+
+    present = _types_in_recommendations(recs)
+    missing = [t for t in wanted_types if t not in present]
+    if not missing:
+        return recs
+
+    catalog = list(catalog_ids.values())
+    used_urls = {r.url for r in recs}
+    used_ids = {cid for cid, entry in catalog_ids.items() if entry.url in used_urls}
+
+    injected: List[Recommendation] = []
+    for wanted in missing:
+        entry = _pick_catalog_entry_for_type(
+            wanted, candidates, used_ids, query, catalog
+        )
+        if entry is None:
+            continue
+        used_ids.add(entry.id)
+        injected.extend(grounding.ground([entry.id], catalog_ids))
+
+    if not injected:
+        return recs
+
+    merged: List[Recommendation] = []
+    seen_urls: set[str] = set()
+    for rec in injected + recs:
+        if rec.url in seen_urls:
+            continue
+        seen_urls.add(rec.url)
+        merged.append(rec)
+        if len(merged) >= config.MAX_RECS:
+            break
+    return merged
+
+
 # ---------------------------------------------------------------------------
 # nodes
 # ---------------------------------------------------------------------------
@@ -110,8 +207,11 @@ def recommend(state: GraphState) -> GraphState:
 
     query = _search_query(a, messages)
     retriever = get_retriever()
+    search_k = config.RERANK_TOPK
+    if a.intent == "refine" and a.test_types_wanted:
+        search_k = max(config.RERANK_TOPK, config.REFINE_CANDIDATE_TOPK)
     candidates = retriever.search(
-        query, k=config.RERANK_TOPK, boost_test_types=a.test_types_wanted or None
+        query, k=search_k, boost_test_types=a.test_types_wanted or None
     )
     state["candidates"] = candidates
 
@@ -132,6 +232,11 @@ def recommend(state: GraphState) -> GraphState:
         if not ids:
             ids = [c.id for c in candidates]
         recs = grounding.ground(ids, catalog_ids)
+
+    if a.intent == "refine" and a.test_types_wanted:
+        recs = _ensure_refine_type_coverage(
+            recs, candidates, a.test_types_wanted, catalog_ids, query
+        )
 
     state["recommendations"] = recs
     if recs:

@@ -44,6 +44,25 @@ def test_refine_adds_personality_type(graph):
     assert any("P" in types.get(r.url, "") for r in recs)
 
 
+def test_honors_refine_probe_scenario(graph):
+    """Regression for eval/probes.py honors_refine (Java developer + personality too)."""
+    messages = [
+        {
+            "role": "user",
+            "content": "Hiring a mid-level Java developer who works with stakeholders",
+        },
+        {"role": "assistant", "content": "Here are some assessments."},
+        {"role": "user", "content": "Actually, add personality tests too"},
+    ]
+    state = run_graph(graph, messages)
+    assert state["analysis"].intent == "refine"
+    assert "P" in state["analysis"].test_types_wanted
+    types = _url_types()
+    recs = state["recommendations"]
+    assert len(recs) >= 1
+    assert any("P" in types.get(r.url, "") for r in recs)
+
+
 def test_compare_is_grounded_and_no_recs(graph):
     messages = [
         {"role": "user", "content": "What's the difference between OPQ32r and Verify - General Ability Screen (GSA)?"}

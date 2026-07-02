@@ -83,6 +83,7 @@ APTITUDE_VERIFY_BOOST = 0.14  # named Verify / G+ products
 
 MAX_CLARIFICATIONS = 2
 MAX_RECS = 10
+REFINE_CANDIDATE_TOPK = 40  # wider retrieval pool on refine so new test types can surface
 
 DESC_TRUNC = 160  # chars of description shown to the LLM in rerank prompt
 
