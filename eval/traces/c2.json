@@ -1,0 +1,18 @@
+{
+  "id": "c2-senior-rust-engineer",
+  "persona": "Engineering manager hiring a senior Rust/networking infrastructure engineer",
+  "facts": {
+    "role": "senior Rust engineer for high-performance networking infrastructure",
+    "seniority": "senior individual contributor",
+    "skills": "Rust, Linux systems, networking; wants cognitive ability test too",
+    "remote": "yes, remote testing preferred"
+  },
+  "initial_query": "I'm hiring a senior Rust engineer for high-performance networking infrastructure. What assessments should I use?",
+  "relevant_ids": [
+    "smart-interview-live-coding",
+    "linux-programming-general",
+    "networking-and-implementation-new",
+    "shl-verify-interactive-g",
+    "occupational-personality-questionnaire-opq32r"
+  ]
+}

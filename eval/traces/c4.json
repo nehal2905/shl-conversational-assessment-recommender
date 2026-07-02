@@ -1,0 +1,17 @@
+{
+  "id": "c4-graduate-financial-analyst",
+  "persona": "Campus recruiter hiring final-year graduate financial analysts",
+  "facts": {
+    "role": "graduate financial analyst",
+    "seniority": "final-year students, no work experience",
+    "skills": "numerical reasoning, finance knowledge, situational judgement for graduates"
+  },
+  "initial_query": "Hiring graduate financial analysts — final-year students, no work experience. We need numerical reasoning and a finance knowledge test.",
+  "relevant_ids": [
+    "shl-verify-interactive-numerical-reasoning",
+    "financial-accounting-new",
+    "basic-statistics-new",
+    "graduate-scenarios",
+    "occupational-personality-questionnaire-opq32r"
+  ]
+}

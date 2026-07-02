@@ -1,0 +1,18 @@
+{
+  "id": "java-mid",
+  "persona": "Hiring manager filling a mid-level Java engineering role",
+  "initial_query": "I'm hiring a Java developer",
+  "facts": {
+    "role": "Java developer",
+    "seniority": "mid-level, around 4 years",
+    "skills": "Java, SQL, works closely with stakeholders",
+    "remote": "yes, remote testing please"
+  },
+  "relevant_ids": [
+    "java-8-new",
+    "core-java-advanced-level-new",
+    "sql-new",
+    "opq32r",
+    "verify-general-ability-screen-gsa"
+  ]
+}

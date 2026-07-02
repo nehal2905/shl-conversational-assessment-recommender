@@ -1,0 +1,19 @@
+{
+  "id": "c7-bilingual-healthcare-admin",
+  "persona": "Healthcare recruiter hiring bilingual admin staff in South Texas",
+  "facts": {
+    "role": "healthcare admin handling patient records",
+    "seniority": "mid-level admin",
+    "skills": "HIPAA compliance, medical terminology, Microsoft Word; personality in Spanish",
+    "languages": "functionally bilingual — English for written knowledge tests, Latin American Spanish for personality",
+    "remote": "yes"
+  },
+  "initial_query": "We're hiring bilingual healthcare admin staff in South Texas — they handle patient records and need to be assessed in Spanish. HIPAA compliance is critical. What assessments work?",
+  "relevant_ids": [
+    "hipaa-security",
+    "medical-terminology-new",
+    "microsoft-word-365-essentials-new",
+    "dependability-and-safety-instrument-dsi",
+    "occupational-personality-questionnaire-opq32r"
+  ]
+}

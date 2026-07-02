@@ -1,0 +1,16 @@
+{
+  "id": "c1-executive-leadership",
+  "persona": "HR leader selecting OPQ-based leadership assessments for executive hiring",
+  "facts": {
+    "role": "senior leadership — CXOs and director-level executives",
+    "seniority": "15+ years experience, CXO and director pool",
+    "skills": "leadership selection with benchmark comparison",
+    "constraints": "selection use case, not developmental feedback"
+  },
+  "initial_query": "We need a solution for senior leadership.",
+  "relevant_ids": [
+    "occupational-personality-questionnaire-opq32r",
+    "occupational-personality-questionnaire-universal-competency-report",
+    "occupational-personality-questionnaire-leadership-report"
+  ]
+}

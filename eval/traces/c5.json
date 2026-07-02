@@ -1,0 +1,18 @@
+{
+  "id": "c5-sales-reskilling",
+  "persona": "L&D lead running a sales organization re-skilling and talent audit",
+  "facts": {
+    "role": "sales organization audit and development",
+    "seniority": "individual contributors and first-line sales managers",
+    "skills": "self-reported skills (GSA), personality, sales-specific OPQ reports, digital selling",
+    "constraints": "OPQ for everyone; MQ only where motivators needed in Sales Report"
+  },
+  "initial_query": "As part of our restructuring and annual talent audit, we need to re-skill our Sales organization. What solutions do you recommend?",
+  "relevant_ids": [
+    "global-skills-assessment",
+    "global-skills-development-report",
+    "occupational-personality-questionnaire-opq32r",
+    "occupational-personality-questionnaire-sales-report",
+    "salestransformationreport2-0-individualcontributor"
+  ]
+}

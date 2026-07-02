@@ -1,0 +1,15 @@
+{
+  "id": "c10-graduate-management-trainee",
+  "persona": "Graduate programme lead building a management trainee assessment battery",
+  "facts": {
+    "role": "graduate management trainee",
+    "seniority": "recent graduates, no prior work experience",
+    "skills": "cognitive ability, situational judgement; OPQ removed as too long",
+    "constraints": "final battery is Verify G+ and Graduate Scenarios only"
+  },
+  "initial_query": "We run a graduate management trainee scheme. We need a full battery — cognitive, personality, and situational judgement. All recent graduates.",
+  "relevant_ids": [
+    "shl-verify-interactive-g",
+    "graduate-scenarios"
+  ]
+}

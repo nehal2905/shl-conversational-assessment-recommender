@@ -1,0 +1,20 @@
+{
+  "id": "c9-senior-fullstack-backend",
+  "persona": "Engineering hiring manager filling a senior backend-leaning full-stack role",
+  "facts": {
+    "role": "senior full-stack engineer (backend-leaning senior IC)",
+    "seniority": "senior IC, 5+ years, leads design on own services, mentors but no direct reports",
+    "skills": "Core Java Advanced, Spring, SQL, AWS, Docker; keep Verify G+; drop REST; Angular secondary",
+    "remote": "yes"
+  },
+  "initial_query": "Here's the JD for an engineer we need to fill. Can you recommend an assessment battery?\n> \"Senior Full-Stack Engineer — 5+ years across Core Java, Spring, REST API design, Angular, SQL/relational databases, AWS deployment, and Docker. Will own end-to-end microservice delivery, contribute to architectural decisions, and mentor mid-level engineers. Strong CI/CD and cloud-native experience required.\"",
+  "relevant_ids": [
+    "core-java-advanced-level-new",
+    "spring-new",
+    "sql-new",
+    "amazon-web-services-aws-development-new",
+    "docker-new",
+    "shl-verify-interactive-g",
+    "occupational-personality-questionnaire-opq32r"
+  ]
+}

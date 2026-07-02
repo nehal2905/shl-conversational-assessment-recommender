@@ -1,0 +1,18 @@
+{
+  "id": "c8-admin-assistant-office",
+  "persona": "Office manager screening admin assistants for daily Excel and Word work",
+  "facts": {
+    "role": "administrative assistant",
+    "seniority": "entry to mid-level",
+    "skills": "Microsoft Excel and Word — wants simulations not just knowledge tests",
+    "constraints": "quick screen but willing to add 365 simulations for capability depth"
+  },
+  "initial_query": "I need to quickly screen admin assistants for Excel and Word daily.",
+  "relevant_ids": [
+    "microsoft-excel-365-new",
+    "microsoft-word-365-new",
+    "ms-excel-new",
+    "ms-word-new",
+    "occupational-personality-questionnaire-opq32r"
+  ]
+}

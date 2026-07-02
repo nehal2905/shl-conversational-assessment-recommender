@@ -1,0 +1,15 @@
+fastapi
+uvicorn[standard]
+pydantic>=2
+langgraph
+langchain-core
+groq
+fastembed
+faiss-cpu
+rank-bm25
+rapidfuzz
+httpx
+beautifulsoup4
+playwright
+numpy
+pytest

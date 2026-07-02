@@ -1,0 +1,17 @@
+{
+  "id": "sales-entry",
+  "persona": "Recruiter hiring entry-level sales representatives",
+  "initial_query": "I need assessments for a sales representative role",
+  "facts": {
+    "role": "sales representative",
+    "seniority": "entry-level",
+    "skills": "customer focus, resilience, communication",
+    "remote": "yes"
+  },
+  "relevant_ids": [
+    "sales-representative-solution",
+    "situational-judgement-test-generic",
+    "verify-general-ability-screen-gsa",
+    "opq32r"
+  ]
+}
