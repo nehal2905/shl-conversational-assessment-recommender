@@ -37,51 +37,7 @@ _COMPARE_PATTERNS = [
     r"\bwhich is better\b",
 ]
 
-_TEST_TYPE_KEYWORDS = {
-    "P": ["personality", "behaviou?r", "opq", "motivation"],
-    "A": ["ability", "aptitude", "cognitive", "reasoning", "numerical", "verbal", "inductive"],
-    "K": ["knowledge", "skill", "technical", "coding test", "language test"],
-    "C": ["competenc"],
-    "B": ["situational judg", "biodata"],
-    "S": ["simulation"],
-    "E": ["assessment exercise", "in-tray", "in tray"],
-    "D": ["360", "development"],
-}
-
-_SENIORITY = {
-    "junior": ["junior", "entry", "graduate", "intern", "fresher"],
-    "mid": ["mid", "intermediate", "mid-level", "mid level"],
-    "senior": ["senior", "lead", "principal", "staff", "manager", "director", "head"],
-}
-
-_ROLE_HINTS = [
-    "developer", "engineer", "programmer", "analyst", "manager", "designer",
-    "administrator", "consultant", "accountant", "sales", "representative",
-    "executive", "scientist", "architect", "technician", "specialist",
-    "clerk", "officer", "nurse", "teacher", "agent", "supervisor",
-]
-
-_SKILL_HINTS = [
-    "java", "python", "javascript", "c++", "c#", ".net", "sql", "html", "css",
-    "react", "angular", "node", "aws", "azure", "spring", "django", "excel",
-    "salesforce", "sap", "linux", "docker", "kubernetes", "php", "ruby", "go",
-    "typescript", "stakeholder", "communication", "leadership", "customer",
-]
-
-
-def _last_user_message(user_block: str) -> str:
-    """Extract the most recent USER line from a formatted conversation block."""
-    lines = [ln.strip() for ln in user_block.splitlines()]
-    user_lines = [ln[len("USER:"):].strip() for ln in lines if ln.upper().startswith("USER:")]
-    if user_lines:
-        return user_lines[-1]
-    return user_block
-
-
-def _all_user_text(user_block: str) -> str:
-    lines = [ln.strip() for ln in user_block.splitlines()]
-    parts = [ln[len("USER:"):].strip() for ln in lines if ln.upper().startswith("USER:")]
-    return " ".join(parts) if parts else user_block
+from app.agent.extraction import extract_slots_from_text, has_enough_context
 
 
 def _count_assistant_turns(user_block: str) -> int:
@@ -93,7 +49,7 @@ def _match_any(patterns, text) -> bool:
 
 
 def _analyze(user_block: str) -> dict:
-    convo = _all_user_text(user_block).lower()
+    convo = all_user_text_from_block(user_block).lower()
     last = _last_user_message(user_block).lower()
     prior_assistant = _count_assistant_turns(user_block)
 
@@ -126,44 +82,25 @@ def _analyze(user_block: str) -> dict:
             result["compare_targets"] = targets
             return result
 
-    # extraction --------------------------------------------------------------
-    for tt, kws in _TEST_TYPE_KEYWORDS.items():
-        if any(re.search(kw, convo) for kw in kws):
-            result["test_types_wanted"].append(tt)
-
-    result["skills"] = [s for s in _SKILL_HINTS if re.search(rf"\b{re.escape(s)}\b", convo)]
-
-    for level, kws in _SENIORITY.items():
-        if any(kw in convo for kw in kws):
-            result["seniority"] = level
-            break
-    m = re.search(r"(\d+)\s*(?:\+)?\s*year", convo)
-    if m and result["seniority"] is None:
-        yrs = int(m.group(1))
-        result["seniority"] = "junior" if yrs <= 2 else ("mid" if yrs <= 6 else "senior")
-
-    result["role"] = _extract_role(convo)
-
-    if "remote" in convo:
-        result["remote_required"] = True
+    # extraction from full conversation ---------------------------------------
+    slots = extract_slots_from_text(convo)
+    result.update(slots)
 
     # refine vs recommend vs vague -------------------------------------------
     is_refine = bool(re.search(r"\b(also|add|actually|instead|as well|too|include)\b", last)) and (
         result["test_types_wanted"] or result["skills"]
     )
 
-    has_context = result["role"] is not None and (
-        result["seniority"] or result["skills"] or result["test_types_wanted"] or result["constraints"]
-    )
-
     if is_refine and prior_assistant >= 1:
         result["intent"] = "refine"
         result["ready_to_recommend"] = True
-    elif has_context:
-        result["intent"] = "recommend"
-        result["ready_to_recommend"] = True
-    elif result["skills"] or result["test_types_wanted"]:
-        # Some signal but no role — still actionable enough to recommend.
+    elif has_enough_context(
+        result["role"],
+        result["seniority"],
+        result["skills"],
+        result["test_types_wanted"],
+        result["constraints"],
+    ):
         result["intent"] = "recommend"
         result["ready_to_recommend"] = True
     else:
@@ -176,12 +113,19 @@ def _analyze(user_block: str) -> dict:
     return result
 
 
-def _extract_role(text: str) -> str | None:
-    for hint in _ROLE_HINTS:
-        m = re.search(rf"(\w+\s+)?{hint}", text)
-        if m:
-            return m.group(0).strip()
-    return None
+def _last_user_message(user_block: str) -> str:
+    """Extract the most recent USER line from a formatted conversation block."""
+    lines = [ln.strip() for ln in user_block.splitlines()]
+    user_lines = [ln[len("USER:"):].strip() for ln in lines if ln.upper().startswith("USER:")]
+    if user_lines:
+        return user_lines[-1]
+    return user_block
+
+
+def all_user_text_from_block(user_block: str) -> str:
+    lines = [ln.strip() for ln in user_block.splitlines()]
+    parts = [ln[len("USER:"):].strip() for ln in lines if ln.upper().startswith("USER:")]
+    return " ".join(parts) if parts else user_block
 
 
 def _extract_compare_targets(sentence: str) -> list[str]:

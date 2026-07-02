@@ -25,6 +25,8 @@ intent is one of:
 
 Set ready_to_recommend = true if a job description was pasted OR (role is present AND at least
 one of {seniority, skills, test_types_wanted, constraints} is known). Otherwise false.
+Read ALL user messages when extracting role, seniority, and skills — facts may appear across
+multiple turns (e.g. role in turn 1, seniority in turn 2).
 If ready_to_recommend is false and intent is "vague", write ONE short clarifying_question
 targeting the single most useful missing fact. Never ask more than one question."""
 

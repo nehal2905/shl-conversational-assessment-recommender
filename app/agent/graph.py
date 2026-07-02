@@ -9,13 +9,22 @@ from app.agent import nodes
 from app.agent.state import Analysis, GraphState
 
 
+from app.agent.extraction import has_enough_context
+
+
 def route(state: GraphState) -> str:
     a: Analysis = state["analysis"]
     if a.intent == "off_topic":
         return "refuse"
     if a.intent == "compare" and a.compare_targets:
         return "compare"
-    if a.ready_to_recommend or a.intent in ("recommend", "refine"):
+    if (
+        a.ready_to_recommend
+        or a.intent in ("recommend", "refine")
+        or has_enough_context(
+            a.role, a.seniority, a.skills, a.test_types_wanted, a.constraints
+        )
+    ):
         return "recommend"
     return "clarify"  # vague and not ready
 

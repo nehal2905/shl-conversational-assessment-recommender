@@ -7,6 +7,7 @@ from typing import List
 from rapidfuzz import fuzz, process
 
 from app import config, grounding, llm, prompts
+from app.agent.extraction import all_user_text, enrich_analysis
 from app.agent.state import Analysis, GraphState
 from app.catalog import CatalogEntry, get_catalog, get_id_index
 from app.schemas import ChatResponse, Recommendation
@@ -48,17 +49,13 @@ def _requirement_summary(a: Analysis) -> str:
 
 
 def _search_query(a: Analysis, messages: List[dict]) -> str:
-    free_text = ""
-    for m in reversed(messages):
-        if m.get("role") == "user":
-            free_text = str(m.get("content", ""))
-            break
+    user_text = all_user_text(messages)
     parts = [
         a.role or "",
         a.seniority or "",
         " ".join(a.skills),
         " ".join(a.constraints),
-        free_text,
+        user_text,
     ]
     return " ".join(p for p in parts if p).strip()
 
@@ -163,19 +160,42 @@ def _ensure_refine_type_coverage(
 # ---------------------------------------------------------------------------
 # nodes
 # ---------------------------------------------------------------------------
+def _normalize_analysis_raw(raw: dict) -> dict:
+    """Coerce common LLM JSON shape mismatches before Pydantic validation."""
+    out = dict(raw)
+    for key in ("skills", "test_types_wanted", "languages", "constraints", "compare_targets"):
+        val = out.get(key)
+        if val is None:
+            out[key] = []
+        elif isinstance(val, str):
+            out[key] = [s.strip() for s in val.split(",") if s.strip()]
+    for key in ("ready_to_recommend", "remote_required"):
+        val = out.get(key)
+        if isinstance(val, str):
+            out[key] = val.strip().lower() in ("true", "1", "yes")
+    for key in ("role", "seniority", "clarifying_question", "off_topic_reason"):
+        val = out.get(key)
+        if isinstance(val, str) and not val.strip():
+            out[key] = None
+    return out
+
+
 def analyze(state: GraphState) -> GraphState:
     messages = state["messages"]
     formatted = format_messages(messages)
     raw = llm.chat_json(prompts.ANALYZE_SYSTEM, prompts.analyze_user(formatted))
 
     try:
-        analysis = Analysis(**raw)
+        analysis = Analysis(**_normalize_analysis_raw(raw if isinstance(raw, dict) else {}))
     except Exception:
         # Defensive: if the LLM returns something off-shape, treat as vague.
         analysis = Analysis(
             intent="vague",
             clarifying_question="What role are you hiring for, and what seniority level?",
         )
+
+    # Re-derive slots from the full conversation so earlier answers are not lost.
+    analysis = enrich_analysis(analysis, messages)
 
     # Invariant 3: force-commit after 2 clarifications.
     prior = _count_prior_assistant_turns(messages)
