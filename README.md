@@ -1,3 +1,12 @@
+---
+title: SHL Conversational Assessment Recommender
+emoji: 🤖
+colorFrom: blue
+colorTo: green
+sdk: docker
+pinned: false
+---
+
 # SHL Conversational Assessment Recommender
 
 A **stateless conversational agent** that guides a user from a vague hiring intent
