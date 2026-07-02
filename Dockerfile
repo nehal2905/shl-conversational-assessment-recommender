@@ -28,7 +28,7 @@ FROM python:3.11-slim AS runtime
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
-    PORT=8000
+    PORT=7860
 
 WORKDIR /app
 
@@ -40,7 +40,7 @@ COPY scripts ./scripts
 # fastembed caches the model under /root/.cache — copy so runtime is offline.
 COPY --from=builder /root/.cache /root/.cache
 
-EXPOSE 8000
+EXPOSE 7860
 
-# $PORT is provided by Render/HF Spaces; default 8000 locally.
-CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}"]
+# Hugging Face Spaces sets PORT=7860; keep the same default for local Docker runs.
+CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-7860}"]

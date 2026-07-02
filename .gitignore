@@ -20,3 +20,4 @@ Thumbs.db
 
 # Build / runtime
 *.log
+data/index/
