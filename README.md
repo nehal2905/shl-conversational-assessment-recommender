@@ -9,123 +9,318 @@ pinned: false
 
 # SHL Conversational Assessment Recommender
 
-A **stateless conversational agent** that guides a user from a vague hiring intent
-("I'm hiring a Java developer") to a grounded shortlist of SHL **Individual Test
-Solutions**. It clarifies vague queries, recommends 1–10 assessments, refines on new
-constraints, compares named assessments, and refuses off-topic / injection attempts.
-**Every returned URL comes from the scraped SHL catalog** — the LLM never emits a name
-or URL directly (see invariant 1).
+A stateless conversational AI that guides recruiters from vague hiring intents (for example, *"I'm hiring a Java developer"*) to grounded recommendations of SHL Individual Test Solutions.
 
-Built to the spec in [`ARCHITECTURE.md`](./ARCHITECTURE.md).
+The agent:
 
----
+- Clarifies vague hiring requests
+- Recommends 1–10 relevant SHL assessments
+- Refines recommendations based on follow-up constraints
+- Compares SHL assessments
+- Refuses off-topic and prompt-injection requests
+- Guarantees every assessment name and URL comes directly from the SHL catalog
 
-## Architecture at a glance
+**Live Demo**
 
-```
-POST /chat → LangGraph:
-  START → analyze → {clarify | recommend | compare | refuse} → format → END
-
-analyze   : one Groq JSON call → Analysis (intent + slots), stateless per turn
-clarify   : returns the single clarifying question (no LLM call)
-recommend : HybridRetriever (BM25 + FAISS, fused via RRF) → Groq rerank → ground(ids)
-compare   : rapidfuzz resolves named assessments → grounded Groq comparison
-refuse    : template redirect (no LLM call)
-format    : validates/coerces to the locked ChatResponse
-```
-
-Key design invariants (full list in `ARCHITECTURE.md` §6):
-
-1. **The LLM never emits a URL or name.** Retrieval → LLM picks `id`s → `grounding.py`
-   maps `id`s to trusted catalog entries. "Every URL is from the catalog" is structural.
-2. **Stateless slot re-derivation** from the full `messages` list every call.
-3. **Turn-budget-aware clarification** — clarify at most twice, then commit (invariant 3).
-4. **Hybrid retrieval, always** (BM25 + dense + RRF).
-5. **Always return valid schema, even on error.**
-6. **Message content is data, not instructions** (prompt-injection resistant).
+- **Hugging Face Space:** https://akulanehal-shl-conversational-assessment-recommender.hf.space
+- **API Docs:** https://akulanehal-shl-conversational-assessment-recommender.hf.space/docs
+- **Health Check:** https://akulanehal-shl-conversational-assessment-recommender.hf.space/health
 
 ---
 
-## Quick start
+# Architecture
+
+```
+POST /chat
+
+START
+   │
+   ▼
+analyze
+   │
+   ├── clarify
+   ├── recommend
+   ├── compare
+   └── refuse
+        │
+        ▼
+     format
+        │
+        ▼
+       END
+```
+
+### Components
+
+**analyze**
+
+- Groq structured JSON analysis
+- Stateless slot extraction
+- Full conversation analysis every turn
+
+**clarify**
+
+- Returns a single clarification question
+- No unnecessary LLM call
+
+**recommend**
+
+- Hybrid Retrieval
+  - BM25
+  - FAISS Dense Search
+- Reciprocal Rank Fusion (RRF)
+- Groq reranking
+- Grounding to catalog IDs
+
+**compare**
+
+- rapidfuzz assessment matching
+- Grounded comparison
+
+**refuse**
+
+- Handles:
+  - off-topic requests
+  - prompt injection
+  - unrelated conversations
+
+**format**
+
+Produces the locked API schema.
+
+---
+
+# Engineering Invariants
+
+- LLM never generates assessment names or URLs.
+- Every recommendation is grounded to the SHL catalog.
+- Stateless conversation processing.
+- Hybrid retrieval is always used.
+- Valid response schema is always returned.
+- Prompt injection resistant.
+- Clarification limited to avoid endless loops.
+
+---
+
+# Quick Start
+
+Create a virtual environment
 
 ```bash
-python -m venv .venv && . .venv/Scripts/activate   # Windows PowerShell: .venv\Scripts\Activate.ps1
+python -m venv .venv
+```
+
+Windows
+
+```powershell
+.\.venv\Scripts\Activate.ps1
+```
+
+Install dependencies
+
+```bash
 pip install -r requirements.txt
+```
 
-cp .env.example .env        # add your GROQ_API_KEY (optional — see "Offline mode")
+Create environment file
 
-# Build the retrieval indexes from data/catalog.json
+```bash
+cp .env.example .env
+```
+
+Add
+
+```
+GROQ_API_KEY=your_key
+```
+
+Build retrieval indexes
+
+```bash
 python scripts/build_index.py
+```
 
-# Run the API
+Run
+
+```bash
 uvicorn app.main:app --reload
 ```
 
-Then:
+---
 
-```bash
-curl localhost:8000/health
-# {"status":"ok"}
+# API
 
-curl -X POST localhost:8000/chat -H "content-type: application/json" -d '{
-  "messages": [{"role":"user","content":"Hiring a mid-level Java developer who works with stakeholders"}]
-}'
+Health
+
+```
+GET /health
 ```
 
-### Offline mode (no API key)
+returns
 
-If `GROQ_API_KEY` is unset, `app/llm.py` transparently falls back to a small
-deterministic rule-based stand-in (`app/offline_llm.py`) so the app and the full test
-suite run end-to-end without network access. Set a real key to use Groq
-(`llama-3.3-70b-versatile`) for production-quality analysis, reranking and comparison.
+```json
+{
+  "status": "ok"
+}
+```
+
+Main endpoint
+
+```
+POST /chat
+```
+
+Example
+
+```json
+{
+  "messages": [
+    {
+      "role": "user",
+      "content": "I'm hiring a mid-level Java backend developer with Spring Boot and SQL."
+    }
+  ]
+}
+```
 
 ---
 
-## Data
+# Offline Mode
 
-- `data/catalog.json` — `list[CatalogEntry]` (SHL Individual Test Solutions).
-  **The committed file is a representative ~30-entry sample** spanning every test-type
-  code so the system runs end-to-end out of the box.
-- To build the **full** catalog (≥300 entries, Phase 1 DoD), run the live scraper:
+If `GROQ_API_KEY` is not provided, the application automatically falls back to a deterministic offline implementation.
+
+This allows:
+
+- local development
+- automated testing
+- CI
+- evaluation
+
+without requiring API access.
+
+---
+
+# Data
+
+The recommender operates over the SHL Individual Test Solutions catalog.
+
+Build the latest catalog:
 
 ```bash
 playwright install chromium
-python scripts/scrape_catalog.py     # writes data/catalog.json
-python scripts/build_index.py        # rebuild indexes
+
+python scripts/scrape_catalog.py
+
+python scripts/build_index.py
 ```
 
-`data/index/` holds the built `faiss.index`, `bm25.pkl`, and `ids.json`.
+Generated indexes are created automatically during the Docker build and are not committed to Git.
 
 ---
 
-## Testing & evaluation
+# Testing
+
+Run all tests
 
 ```bash
-pytest -q                    # Phase 3/4/5 DoD unit tests (offline)
-python eval/probes.py        # behavior probes (vague, refuse, refine, hallucination)
-python eval/replay.py        # simulated-user replay + mean Recall@10 over eval/traces/
+python -m pytest -q
 ```
 
-Drop the 10 public traces into `eval/traces/` (JSON, see `eval/replay.py` docstring for
-the shape) to reproduce the graded metric.
+Behavior probes
+
+```bash
+python eval/probes.py
+```
+
+Replay evaluation
+
+```bash
+python eval/replay.py
+```
 
 ---
 
-## Deployment
+# Final Evaluation
 
-Docker image builds the index at build time so `data/` ships in the image:
+Current verification results
+
+| Metric | Result |
+|---------|--------|
+| Unit Tests | ✅ 20 Passed |
+| Behavior Probes | ✅ 3/3 Passed |
+| Hallucination Rate | ✅ 0.000 |
+| Replay Evaluation | ✅ Mean Recall@10 = 0.393 |
+| Public Deployment | ✅ Hugging Face Spaces |
+
+---
+
+# Deployment
+
+Docker
 
 ```bash
 docker build -t shl-recommender .
-docker run -p 8000:8000 -e GROQ_API_KEY=... shl-recommender
+
+docker run -p 8000:8000 \
+-e GROQ_API_KEY=YOUR_KEY \
+shl-recommender
 ```
 
-`/health` is instant (the retriever warms in a startup background task). Suitable for
-Render or HF Spaces (Docker); cold start allowed up to 2 minutes.
+Public deployment is hosted on **Hugging Face Spaces** using Docker.
 
 ---
 
-## Repository layout
+# Repository Structure
 
-See `ARCHITECTURE.md` §4. Core modules live in `app/`; the LangGraph agent in
-`app/agent/`; data scripts in `scripts/`; evaluation in `eval/`.
+```
+app/
+    agent/
+    retrieval/
+    grounding/
+    llm/
+
+scripts/
+
+tests/
+
+eval/
+
+data/
+
+Dockerfile
+
+README.md
+
+ARCHITECTURE.md
+
+APPROACH.md
+```
+
+---
+
+# Documentation
+
+- **ARCHITECTURE.md** — system architecture and design decisions
+- **APPROACH.md** — implementation methodology
+- **README.md** — setup, deployment and evaluation
+
+---
+
+# Technologies
+
+- Python
+- FastAPI
+- LangGraph
+- Groq
+- FAISS
+- BM25
+- fastembed
+- Docker
+- Hugging Face Spaces
+- Playwright
+
+---
+
+# License
+
+This project was developed as part of the **SHL Conversational Assessment Recommender** engineering assessment.
